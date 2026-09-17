@@ -4,8 +4,7 @@ Sistema de encurtamento de URLs focado em performance e escalabilidade.
 
 ## Estrutura do Projeto / Project Structure
 
-* [Backend (API)](./backend/README.md): Laravel 12, Redis, PostgreSQL.
-* [Frontend](./frontend/README.md): Vue.js 3.
+* [Backend (API)](./docs/api.md): Laravel 12, Redis, PostgreSQL.
 
 ---
 
