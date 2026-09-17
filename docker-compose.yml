@@ -1,0 +1,90 @@
+name: url-shortener
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: url-shortener-app
+    restart: unless-stopped
+    environment: &laravel-env
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_NAME: URL Shortener
+      APP_URL: "${DOCKER_APP_URL:-http://localhost:8000}"
+      APP_LOCALE: pt_BR
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: laravel
+      DB_USERNAME: laravel
+      DB_PASSWORD: "${DOCKER_DB_PASSWORD:-laravel}"
+      SESSION_DRIVER: database
+      AUTH_DRIVER: sanctum
+      CACHE_STORE: redis
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${DOCKER_REDIS_PASSWORD:-null}"
+      QUEUE_CONNECTION: redis
+      JWT_SECRET: "${DOCKER_JWT_SECRET:-change-me}"
+      HASHIDS_SALT: "${DOCKER_HASHIDS_SALT:-change-me}"
+      MAIL_MAILER: log
+      LOG_CHANNEL: stderr
+    ports:
+      - "${APP_PORT:-8000}:80"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: url-shortener-queue
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=1 --tries=3
+    environment:
+      <<: *laravel-env
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    init: true
+
+  db:
+    image: postgres:16-alpine
+    container_name: url-shortener-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: laravel
+      POSTGRES_USER: laravel
+      POSTGRES_PASSWORD: "${DOCKER_DB_PASSWORD:-laravel}"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laravel -d laravel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: url-shortener-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db_data:
+  redis_data:

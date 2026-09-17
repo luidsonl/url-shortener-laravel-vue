@@ -1,7 +1,10 @@
 .git
 node_modules
 vendor
+public/build
 storage/*.key
+storage/logs/*
+database/*.sqlite*
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml

@@ -1,9 +1,26 @@
+# ---- Frontend build stage (Vue/Vite) ----
+FROM node:22-alpine AS frontend
+
+WORKDIR /app
+
+# Install dependencies first for better caching
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy the source needed by Vite and build production assets
+COPY vite.config.js ./
+COPY resources ./resources
+RUN npm run build
+
+# ---- Application stage (Nginx + PHP-FPM) ----
 FROM php:8.4-fpm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
+    nginx \
+    supervisor \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
@@ -37,6 +54,16 @@ RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --
 # Copy the rest of the application
 COPY . .
 
+# Copy the Vite-built assets from the frontend stage
+COPY --from=frontend /app/public/build /var/www/public/build
+
+# Configure nginx (serves the app and proxies PHP to php-fpm)
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/sites-enabled/default
+
+# Configure Supervisor to run nginx + php-fpm in a single container
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 # Create necessary directories and set permissions
 RUN mkdir -p storage/framework/{cache/data,sessions,views} storage/logs bootstrap/cache && \
     chown -R www-data:www-data storage bootstrap/cache && \
@@ -46,28 +73,57 @@ RUN mkdir -p storage/framework/{cache/data,sessions,views} storage/logs bootstra
 RUN php artisan package:discover --ansi
 
 # Create entrypoint script
-RUN echo '#!/bin/bash\n\
-    set -e\n\
-    if [ ! -f .env ]; then\n\
-    cp .env.example .env\n\
-    fi\n\
-    \n\
-    # Wait for database to be ready (if DB_HOST is set)\n\
-    if [ -n "$DB_HOST" ]; then\n\
-    echo "Waiting for database ($DB_HOST)..."\n\
-    until nc -z "$DB_HOST" 5432; do\n\
-    echo "Postgres is unavailable - sleeping"\n\
-    sleep 1\n\
-    done\n\
-    echo "Postgres is up - executing commands"\n\
-    fi\n\
-    \n\
-    php artisan key:generate --no-interaction --force\n\
-    php artisan migrate --force\n\
-    \n\
-    # Execute CMD\n\
-    exec "$@"' > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+RUN cat > /usr/local/bin/entrypoint.sh <<'EOF'
+#!/bin/bash
+set -e
 
-EXPOSE 9000
+if [ ! -f .env ]; then
+    cp .env.example .env
+fi
+
+# Ensure writable paths for the runtime
+chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+
+# Wait for database to be ready (if DB_HOST is set)
+if [ -n "$DB_HOST" ]; then
+    echo "Waiting for database ($DB_HOST)..."
+    until nc -z "$DB_HOST" "${DB_PORT:-5432}"; do
+        echo "Postgres is unavailable - sleeping"
+        sleep 1
+    done
+    echo "Postgres is up"
+fi
+
+# Wait for redis to be ready (if REDIS_HOST is set)
+if [ -n "$REDIS_HOST" ]; then
+    echo "Waiting for redis ($REDIS_HOST)..."
+    until nc -z "$REDIS_HOST" "${REDIS_PORT:-6379}"; do
+        echo "Redis is unavailable - sleeping"
+        sleep 1
+    done
+    echo "Redis is up"
+fi
+
+# Generate APP_KEY only when missing, so tokens stay valid across restarts
+if ! grep -q '^APP_KEY=base64:' .env; then
+    php artisan key:generate --no-interaction --force
+fi
+
+# Run migrations only on the primary app (disable with RUN_MIGRATIONS=false)
+if [ "$RUN_MIGRATIONS" != "false" ]; then
+    php artisan migrate --force
+fi
+
+# Cache the config in production for performance
+if [ "$APP_ENV" = "production" ]; then
+    php artisan config:cache || true
+fi
+
+# Execute CMD
+exec "$@"
+EOF
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 80
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["php-fpm"]
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
