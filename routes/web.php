@@ -8,6 +8,13 @@ Route::get('/api/documentation', function () {
     return view('swagger');
 });
 
+Route::get('/', fn () => view('app'));
+Route::get('/login', fn () => view('app'));
+Route::get('/register', fn () => view('app'));
+Route::get('/forgot-password', fn () => view('app'));
+Route::get('/dashboard', fn () => view('app'));
+Route::get('/profile', fn () => view('app'));
+
 Route::get('/reset-password', [NewPasswordController::class, 'resetPasswordForm'])
     ->name('password.reset');
 
