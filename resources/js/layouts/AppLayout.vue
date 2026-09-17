@@ -15,7 +15,7 @@ async function logout() {
 </script>
 
 <template>
-    <div class="flex min-h-full flex-col bg-slate-50">
+    <div class="flex min-h-screen flex-col bg-slate-50">
         <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
             <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-8">
@@ -75,7 +75,7 @@ async function logout() {
 
         <footer class="border-t border-slate-200 bg-white">
             <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:px-6 lg:px-8">
-                <p>&copy; {{ new Date().getFullYear() }} shrt.ly — Encurtador de URLs.</p>
+                <p>&copy; {{ new Date().getFullYear() }} Encurtador de URLs.</p>
                 <div class="flex items-center gap-6">
                     <router-link :to="{ name: 'home' }" class="transition hover:text-slate-900">Home</router-link>
                     <router-link v-if="!auth.isAuthenticated" :to="{ name: 'login' }" class="transition hover:text-slate-900">

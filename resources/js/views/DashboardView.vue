@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import axios from 'axios';
 
 const links = ref([]);
@@ -25,6 +25,7 @@ const formMessage = ref(null);
 
 const created = ref(null);
 const copiedKey = ref(null);
+const refreshTimer = ref(null);
 
 function formatDate(value) {
     if (!value) return '—';
@@ -123,7 +124,14 @@ async function copyText(key, text) {
     }
 }
 
-onMounted(() => fetchLinks());
+onMounted(() => {
+    fetchLinks();
+    refreshTimer.value = setInterval(() => fetchLinks(pagination.current_page), 15000);
+});
+
+onUnmounted(() => {
+    clearInterval(refreshTimer.value);
+});
 </script>
 
 <template>
@@ -133,7 +141,16 @@ onMounted(() => fetchLinks());
                 <h1 class="text-3xl font-bold tracking-tight text-slate-900">Meus Links</h1>
                 <p class="mt-1 text-sm text-slate-500">Crie, acompanhe e gerencie seus links encurtados.</p>
             </div>
-            <div class="text-sm text-slate-500">{{ pagination.total }} link(s) criado(s)</div>
+            <div class="flex items-center gap-2 text-sm text-slate-500">
+                <span>{{ pagination.total }} link(s) criado(s)</span>
+                <button
+                    @click="fetchLinks(pagination.current_page)"
+                    class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    title="Atualizar lista"
+                >
+                    Atualizar
+                </button>
+            </div>
         </div>
 
         <div class="mt-8 grid gap-8 lg:grid-cols-3">
