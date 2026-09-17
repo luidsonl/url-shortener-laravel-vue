@@ -26,6 +26,10 @@ API para encurtamento de links desenvolvida com Laravel 12, projetada para alta 
     * Documentação interativa via Swagger UI.
     * Suíte de testes automatizados com PHPUnit.
 
+* Frontend (SPA):
+    * Aplicação Vue 3 (Vue Router + Pinia) servida pelo Blade via Vite.
+    * Pages de autenticação, dashboard de links e perfil consumindo a API.
+
 
 # EN
 ---
@@ -55,19 +59,38 @@ Robust link-shortening API built with Laravel 12, designed for high traffic usin
     * Interactive API documentation via Swagger UI.
     * Comprehensive test suite using PHPUnit.
 
+* Frontend (SPA):
+    * Vue 3 application (Vue Router + Pinia) served by Blade through Vite.
+    * Authentication, link dashboard, and profile pages consuming the API.
+
 # Tech Stack
 - Laravel 12
+- Vue 3, Vite, Tailwind CSS
 - Redis (Cache & Queues)
 - PHPUnit
 - Swagger (L5-Swagger)
 
 ---
+# Frontend Routes
+
+The SPA is served from root Blade routes and handled client-side by Vue Router. These routes render the same `resources/views/app.blade.php` shell and take precedence over the `/{code}` short-link redirect.
+
+-   `/` - Authentication page (Login/Register tabs).
+-   `/login` - Login form.
+-   `/register` - Registration form.
+-   `/forgot-password` - Request a password reset link.
+-   `/dashboard` - Manage short links (create, copy, delete, bulk delete).
+-   `/profile` - Edit profile, change password, delete account.
+-   `/reset-password` - Blade page to define a new password (from the email link).
+
+---
+
 # API Endpoints
 
 ## Public
+-   `GET /api/health` - Check system status.
+-   `GET /api/documentation` - Swagger UI.
 -   `GET /{code}` - Redirect to the original URL.
--   `GET /health` - Check system status.
--   `GET /api/documentation` - Swagger.
 
 ## Authentication
 -   `POST /api/auth/register` - Register a new user.
@@ -75,7 +98,11 @@ Robust link-shortening API built with Laravel 12, designed for high traffic usin
 -   `POST /api/auth/logout` - Revoke current session.
 -   `GET /api/auth/user` - Get authenticated user details.
 -   `POST /api/auth/validate-token` - Check token validity.
--   `POST /api/forgot-password` - Request reset link.
+
+## Verification & Password
+-   `GET /api/email/verify/{id}/{hash}` - Verify a user's email (signed URL).
+-   `POST /api/email/resend` - Resend the verification email.
+-   `POST /api/forgot-password` - Request a password reset link.
 -   `POST /api/reset-password` - Execute password reset.
 
 ## User Profile

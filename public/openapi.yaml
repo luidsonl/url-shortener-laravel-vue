@@ -6,7 +6,10 @@ info:
     This API allows users to manage their profile, shorten URLs, view analytics, and perform administrative tasks.
     
     ### Security
-    Most routes require a **Bearer Token (JWT)**. Some operations additionally require **Email Verification** or **Admin Roles**.
+    Most routes require a **Bearer token** (Sanctum by default, or JWT). Some operations additionally require **Email Verification** or **Admin Roles**.
+
+    ### Frontend
+    The web frontend is a Vue 3 SPA served by Blade. See the README for the access points (`/`, `/login`, `/register`, `/dashboard`, `/profile`).
   version: 1.0.0
   contact:
     name: Support Team
@@ -80,7 +83,7 @@ paths:
     post:
       tags: [Authentication]
       summary: User login
-      description: Returns a JWT token upon successful authentication.
+      description: Returns a bearer token (Sanctum or JWT) upon successful authentication.
       requestBody:
         required: true
         content:
@@ -719,8 +722,8 @@ components:
       type: object
       properties:
         access_token: { type: string, example: "eyJhbGciOiJIUzI1NiIsInR5..." }
-        token_type: { type: string, example: "bearer" }
-        expires_in: { type: integer, example: 3600 }
+        token_type: { type: string, example: "Bearer" }
+        expires_in: { type: integer, example: 3600, nullable: true }
 
     PaginatedShortLinks:
       type: object
